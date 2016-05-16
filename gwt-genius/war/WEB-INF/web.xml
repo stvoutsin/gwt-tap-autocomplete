@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/javaee 
+              http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+         version="2.5"
+         xmlns="http://java.sun.com/xml/ns/javaee">
+
+  <!-- Servlets -->
+  <servlet>
+    <servlet-name>autocompleteServlet</servlet-name>
+    <servlet-class>com.genius.uk.server.AutocompleteServiceImpl</servlet-class>
+  </servlet>
+  
+  <servlet-mapping>
+    <servlet-name>autocompleteServlet</servlet-name>
+    <url-pattern>/genius/autocomplete</url-pattern>
+  </servlet-mapping>
+  
+    <servlet>
+    <servlet-name>autocompleteServletAsync</servlet-name>
+    <servlet-class>com.genius.uk.server.AutocompleteServiceImplAsync</servlet-class>
+  </servlet>
+  
+  <servlet-mapping>
+    <servlet-name>autocompleteServletAsync</servlet-name>
+    <url-pattern>/genius/autocompleteAsync</url-pattern>
+  </servlet-mapping>
+  
+  <!-- Default page to serve -->
+  <welcome-file-list>
+    <welcome-file>Genius.html</welcome-file>
+  </welcome-file-list>
+  
+
+</web-app>
