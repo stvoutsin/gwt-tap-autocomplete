@@ -40,16 +40,17 @@
     if (givenOptions["webServicePath"]) editor.webServicePath = givenOptions["webServicePath"];
     if (givenOptions["autocompleteLoader"]) editor.autocompleteLoader = givenOptions["autocompleteLoader"];
     if (givenOptions["autocompleteInfo"]) editor.autocompleteInfo = givenOptions["autocompleteInfo"];
-    if (givenOptions["useAutocompleteService"]) editor.useAutocompleteService = givenOptions["useAutocompleteService"];
-    if (givenOptions["availableTags"]){
-    	editor.availableTags = givenOptions["availableTags"];
+    if (givenOptions["servicemode"]) editor.servicemode = givenOptions["servicemode"];
+    if (givenOptions["jsontree"]) editor.jsontree = givenOptions["jsontree"];
+    if (givenOptions["availableTags"]) {
+      editor.availableTags = givenOptions["availableTags"];
     } else {
-    	if (!editor.availableTags){
-    	    editor.availableTags = [
-    	              		"SELECT", "FROM", "ORDER BY","WHERE", "TOP","IN", "AND", "OR", "WITH", "DESC", "ASC", "JOIN", "AS", "HAVING", "ABS",
-    	          			"GROUP","BY", "INNER","OUTER","CROSS","LEFT","RIGHT","FULL","ON","USING","MIN","MAX","COUNT","DISTINCT","ALL","LIKE","ACOS","ASIN","ATAN","ATAN2","COS","SIN","TAN","COT","IS","NOT","NULL","NATURAL","EXISTS","BETWEEN","AREA","BOX","CENTROID","CIRCLE","CONTAINS","COORD1","COORD2","COORDSYS","DISTANCE","INTERSECTS","POINT","POLYGON","REGION"
-    	          		];
-    	}
+      if (!editor.availableTags) {
+        editor.availableTags = [
+          "SELECT", "FROM", "ORDER BY", "WHERE", "TOP", "IN", "AND", "OR", "WITH", "DESC", "ASC", "JOIN", "AS", "HAVING", "ABS",
+          "GROUP", "BY", "INNER", "OUTER", "CROSS", "LEFT", "RIGHT", "FULL", "ON", "USING", "MIN", "MAX", "COUNT", "DISTINCT", "ALL", "LIKE", "ACOS", "ASIN", "ATAN", "ATAN2", "COS", "SIN", "TAN", "COT", "IS", "NOT", "NULL", "NATURAL", "EXISTS", "BETWEEN", "AREA", "BOX", "CENTROID", "CIRCLE", "CONTAINS", "COORD1", "COORD2", "COORDSYS", "DISTANCE", "INTERSECTS", "POINT", "POLYGON", "REGION"
+        ];
+      }
     }
 
     for (var opt in defaults)
@@ -181,6 +182,90 @@
 
   }
 
+  function getCompletionsJsontree(token, context, keywords, options, editor, optional_keyword) {
+    optional_keyword = (typeof optional_keyword === 'undefined') ? '' : optional_keyword;
+    var found = [],
+      start = token.string;
+
+    function maybeAdd(str) {
+      if (str.toLowerCase().indexOf(start.toLowerCase()) == 0 && !jsArrayContains(found, str)) found.push(str);
+    }
+
+    function gatherCompletions(obj) {
+      if (typeof obj == "string") forEach(editor.availableTags, maybeAdd);
+      else if (obj instanceof Array) forEach(editor.availableTags, maybeAdd);
+      else if (obj instanceof Function) forEach(editor.availableTags, maybeAdd);
+      for (var name in obj) maybeAdd(name);
+    }
+
+    if (context) {
+      // If this is a property, see if it belongs to some object we can
+      // find in the current environment.
+      var obj = context.pop(),
+        base;
+      var break_loop = false;
+
+      for (var i = 0; i < editor.jsontree.length; i++) {
+        $.each(editor.jsontree[i], function(key, value) {
+
+          if (key.toLowerCase() == "catalogue") {
+
+            if (obj.string == value) {
+
+              if (optional_keyword) {
+                var temparr = editor.jsontree[i]["tables"].filter(function(item) {
+                  return item["name"].indexOf(optional_keyword) == 0;
+                });
+                found = found.concat(temparr.map(function(a) {
+                  return a.name;
+                }));
+              } else {
+                found = found.concat(editor.jsontree[i]["tables"].map(function(a) {
+                  return a.name;
+                }));
+              }
+
+              break_loop = true;
+              return false;
+
+            }
+
+          } else if (key.toLowerCase() == "tables") {
+            for (var x = 0; x < editor.jsontree[i]["tables"].length; x++) {
+
+              if (obj.string == editor.jsontree[i]["tables"][x]["name"]) {
+                if (optional_keyword) {
+                  var temparr = editor.jsontree[i]["tables"][x]["columns"].filter(function(item) {
+                    return item.indexOf(optional_keyword) == 0;
+                  });
+                  found = found.concat(temparr);
+                } else {
+                  found = found.concat(editor.jsontree[i]["tables"][x]["columns"]);
+
+                }
+              }
+            }
+          }
+
+        });
+
+        if (break_loop) break;
+
+      }
+
+      return found.sort();
+
+
+    } else {
+
+      // If not, just look in the window object and any local scope
+      // (reading into JS mode internals to get at the local and global variables)
+
+      forEach(keywords, maybeAdd);
+      return found.sort();
+    }
+
+  }
 
   function getCompletionsAdql(token, context, keywords, options, editor, optional_keyword) {
     optional_keyword = (typeof optional_keyword === 'undefined') ? '' : optional_keyword;
@@ -428,23 +513,40 @@
       context.push(tprop);
 
     }
-    if (editor.useAutocompleteService != true) {
 
-      return {
-        list: getCompletions(token, context, keywords, options),
-        from: {
-          line: line_original,
-          ch: token_start_original
-        },
-        to: {
-          line: line_original,
-          ch: token_end_original
-        }
-      };
+    if (editor.servicemode.toLowerCase() != "tap") {
+      if (editor.servicemode.toLowerCase() == "jsontree") {
+        return {
+          list: getCompletionsJsontree(token, context, keywords, options, editor, optional_keyword),
+          from: {
+            line: line_original,
+            ch: token_start_original
+          },
+          to: {
+            line: line_original,
+            ch: token_end_original
+          }
+        };
+
+      } else {
+        return {
+          list: getCompletions(token, context, keywords, options),
+          from: {
+            line: line_original,
+            ch: token_start_original
+          },
+          to: {
+            line: line_original,
+            ch: token_end_original
+          }
+        };
+      }
+
+
     } else {
 
       return {
-        
+
         list: getCompletionsAdql(token, context, keywords, options, editor, optional_keyword),
         from: {
           line: line_original,

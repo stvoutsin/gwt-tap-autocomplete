@@ -5,34 +5,34 @@
  *  @author Stelios Voutsinas (ROE)
  *  @version 11/Feb/2015
  *  @requires jQuery v1.7.2 or later
- *  
+ *
  * Licensed under
  *   GPL v3 http://opensource.org/licenses/GPL-3.0
  *
  */
- 
+
 /**
  * TapAutocomplete class
- * 
+ *
  * @param {string} params.textfieldid - The textarea that the TapAutocomplete class will be instantiated for.
  * @param {string} web_service_path - The resource path that will run the TAP_SCHEMA requests and return a list of keywords
- * @param {string} tap_resource - The TAP service 
- * @param {string} servicemode - Mode: TAP or VOSI
+ * @param {string} tap_resource - The TAP service
+ * @param {string} servicemode - Mode: TAP/VOSI/jsontree
  * @param {string} autocomplete_info_id - Id of loader element to be toggled while keywords are being loaded
  * @param {string} autocomplete_info_id - Id of loader element to be toggled while keywords are being loaded
  * @param {string} initial_catalogues - Array of strings, For each (0 or more) catalogue, fetch list of children tables on startup
  *
- * Usage Example:  
+ * Usage Example:
  *    var params = {
  *  	textfieldid: "textfield",
  * 	    web_service_path: 'genius/autocompleteAsync',
- * 		tap_resource: 'https://gaia.esac.esa.int/tap-server/tap/',    
+ * 		tap_resource: 'https://gaia.esac.esa.int/tap-server/tap/',
  * 	    servicemode: "TAP",
  *      ...
- * 	  } 
- * 
+ * 	  }
+ *
  * var autocompleteInstance = new TapAutocomplete(params);
- * 
+ *
  */
 
 var TapAutocomplete = function(params) {
@@ -59,6 +59,8 @@ var TapAutocomplete = function(params) {
 	} else {
 		this.initial_catalogues = [];
 	}
+	if (params.jsontree)
+		this.jsontree = params.jsontree;
 
 	if (this.servicemode.toLowerCase() == "tap") {
 		this.istap = true;
@@ -66,53 +68,57 @@ var TapAutocomplete = function(params) {
 
 	if (this.editor == null && !jQuery('.CodeMirror').length > 0) {
 		CodeMirror.commands.autocomplete = function(cm) {
-			CodeMirror.tapHint(cm, CodeMirror.adqlHint,
-					{
-						webServicePath : params.web_service_path,
-						tapResource : params.tap_resource,
-						useAutocompleteService : (params.servicemode.toLowerCase() == "tap"),
-						autocompleteLoader : params.autocomplete_loader_id,
-						autocompleteInfo : params.autocomplete_info_id,
-					});
+			CodeMirror.tapHint(cm, CodeMirror.adqlHint, {
+				webServicePath: params.web_service_path,
+				tapResource: params.tap_resource,
+				servicemode: params.servicemode.toLowerCase(),
+				autocompleteLoader: params.autocomplete_loader_id,
+				autocompleteInfo: params.autocomplete_info_id,
+				jsontree: params.jsontree,
+
+			});
 		}
 
 		this.editor = CodeMirror.fromTextArea(document.getElementById(params.textfieldid), {
-			mode : "text/x-adql",
-			tabMode : "indent",
-			lineNumbers : true,
-			matchBrackets : true,
-			lineWrapping : true,
-			textWrapping : true,
-			extraKeys : {
-				"Ctrl-Space" : "autocomplete",
+			mode: "text/x-adql",
+			tabMode: "indent",
+			lineNumbers: true,
+			matchBrackets: true,
+			lineWrapping: true,
+			textWrapping: true,
+			extraKeys: {
+				"Ctrl-Space": "autocomplete",
 			},
 
 		});
 	}
 
 	if (typeof this.editor.availableTags == 'undefined') {
-		this.editor.availableTags = [ "SELECT", "FROM", "ORDER BY", "WHERE",
-				"TOP", "IN", "AND", "OR", "WITH", "DESC", "ASC", "JOIN", "AS",
-				"HAVING", "ABS", "GROUP", "BY", "INNER", "OUTER", "CROSS",
-				"LEFT", "RIGHT", "FULL", "ON", "USING", "MIN", "MAX", "COUNT",
-				"DISTINCT", "ALL", "LIKE", "ACOS", "ASIN", "ATAN", "ATAN2",
-				"COS", "SIN", "TAN", "COT", "IS", "NOT", "NULL", "NATURAL",
-				"EXISTS", "BETWEEN", "AREA", "BOX", "CENTROID", "CIRCLE",
-				"CONTAINS", "COORD1", "COORD2", "COORDSYS", "DISTANCE",
-				"INTERSECTS", "POINT", "POLYGON", "REGION" ];
+		this.editor.availableTags = ["SELECT", "FROM", "ORDER BY", "WHERE",
+			"TOP", "IN", "AND", "OR", "WITH", "DESC", "ASC", "JOIN", "AS",
+			"HAVING", "ABS", "GROUP", "BY", "INNER", "OUTER", "CROSS",
+			"LEFT", "RIGHT", "FULL", "ON", "USING", "MIN", "MAX", "COUNT",
+			"DISTINCT", "ALL", "LIKE", "ACOS", "ASIN", "ATAN", "ATAN2",
+			"COS", "SIN", "TAN", "COT", "IS", "NOT", "NULL", "NATURAL",
+			"EXISTS", "BETWEEN", "AREA", "BOX", "CENTROID", "CIRCLE",
+			"CONTAINS", "COORD1", "COORD2", "COORDSYS", "DISTANCE",
+			"INTERSECTS", "POINT", "POLYGON", "REGION"
+		];
 	}
 
 	if (params.servicemode.toLowerCase() == "tap") {
 		this.load_metadata_for_autocomplete(this.initial_catalogues);
-	} else {
+	} else if (params.servicemode.toLowerCase() == "vosi") {
 		this.load_metadata_from_html();
+	} else if (params.servicemode.toLowerCase() == "jsontree") {
+		this.load_metadata_from_jsontree(this.initial_catalogues);
 	}
 }
 
 /**
  * Get the medata content from the HTML data to be used by the auto-completion
  * functions Store the content in the keywords list
- * 
+ *
  */
 TapAutocomplete.prototype.push_metadata_content_html = function(data) {
 
@@ -138,7 +144,7 @@ TapAutocomplete.prototype.push_metadata_content_html = function(data) {
 /**
  * Get the medata content from the Json data to be used by the auto-completion
  * functions Store the content in the keywords list
- * 
+ *
  */
 
 TapAutocomplete.prototype.push_metadata_json = function(data) {
@@ -161,8 +167,10 @@ TapAutocomplete.prototype.push_metadata_json = function(data) {
 TapAutocomplete.prototype.run = function() {
 	if (this.servicemode.toLowerCase() == "tap") {
 		this.load_metadata_for_autocomplete();
-	} else {
+	} else if (this.servicemode.toLowerCase() == "vosi") {
 		this.load_metadata_from_html();
+	} else if (this.servicemode.toLowerCase() == "jsontree") {
+		this.load_metadata_from_jsontree();
 	}
 };
 
@@ -172,51 +180,57 @@ TapAutocomplete.prototype.run = function() {
 TapAutocomplete.prototype.refresh = function() {
 	CodeMirror.commands.autocomplete = function(cm) {
 		CodeMirror.tapHint(cm, CodeMirror.adqlHint, {
-			webServicePath : this.web_service_path,
-			tapResource : this.tap_resource,
-			useAutocompleteService : this.istap,
-			autocompleteInfo : this.autocomplete_info,
-			autocompleteLoader : this.autocomplete_loader
+			webServicePath: this.web_service_path,
+			tapResource: this.tap_resource,
+			servicemode: this.servicemode.toLowerCase(),
+			jsontree: this.jsontree,
+			autocompleteInfo: this.autocomplete_info,
+			autocompleteLoader: this.autocomplete_loader
 		});
 	}
 
-	if (this.servicemode.toLowerCase() == "tap") {
-		this.load_metadata_for_autocomplete();
-	} else {
+	if (params.servicemode.toLowerCase() == "tap") {
+		this.load_metadata_for_autocomplete(this.initial_catalogues);
+	} else if (params.servicemode.toLowerCase() == "vosi") {
 		this.load_metadata_from_html();
+	} else if (params.servicemode.toLowerCase() == "jsontree") {
+		this.load_metadata_from_jsontree(this.initial_catalogues);
 	}
+
 };
 
 /**
  * Load catalogue tables
- * 
+ *
  */
 TapAutocomplete.prototype.load_catalogue_tables = function(catalogue_list) {
 
 	if (this.servicemode.toLowerCase() == "tap") {
 		this.load_metadata_for_autocomplete(catalogue_list);
-	} else {
+	} else if (this.servicemode.toLowerCase() == "vosi") {
 		this.load_metadata_from_html();
+	} else if (params.servicemode.toLowerCase() == "jsontree") {
+		this.load_metadata_from_jsontree();
 	}
 };
 
 /**
  * Load metadata for autocomplete from HTML resource. Talks with a Web service
  * that fetches the initial list of keywords
- * 
+ *
  */
 TapAutocomplete.prototype.load_metadata_from_html = function() {
 	_this = this;
 
 	if (_this.autocomplete_info)
 		jQuery("#" + _this.autocomplete_info).html(
-				"Loading catalogue metadata keywords for auto-complete");
+			"Loading catalogue metadata keywords for auto-complete");
 	if (_this.autocomplete_loader)
 		jQuery("#" + _this.autocomplete_loader).show();
 
 	/**
 	 * Check whether an object (obj) is contained in a list (a)
-	 * 
+	 *
 	 */
 	function contains(a, obj) {
 		var i = a.length;
@@ -254,30 +268,30 @@ TapAutocomplete.prototype.load_metadata_from_html = function() {
 	}
 
 	jQuery.ajax({
-		type : "POST",
-		async : false,
-		data : {
-			resource : _this.html_resource,
-			mode : "vosi"
+		type: "POST",
+		async: false,
+		data: {
+			resource: _this.html_resource,
+			mode: "vosi"
 		},
-		url : _this.web_service_path,
-		timeout : 1000000,
-		error : function() {
+		url: _this.web_service_path,
+		timeout: 1000000,
+		error: function() {
 			if (_this.autocomplete_info)
 				jQuery("#" + _this.autocomplete_info).html(
-						"CTRL + Space to activate auto-complete");
+					"CTRL + Space to activate auto-complete");
 			if (_this.autocomplete_loader)
 				jQuery("#" + _this.autocomplete_loader).hide();
 
 		},
-		success : function(data) {
+		success: function(data) {
 
 			if (data != "") {
 				push_metadata_content_html(data);
 			}
 			if (_this.autocomplete_info)
 				jQuery("#" + _this.autocomplete_info).html(
-						"CTRL + Space to activate auto-complete");
+					"CTRL + Space to activate auto-complete");
 			if (_this.autocomplete_loader)
 				jQuery("#" + _this.autocomplete_loader).hide();
 
@@ -285,21 +299,74 @@ TapAutocomplete.prototype.load_metadata_from_html = function() {
 	});
 };
 
-/**
- * Load metadata for autocomplete. Talks with a Web service that fetches the
- * initial list of keywords
- * 
- */
-TapAutocomplete.prototype.load_metadata_for_autocomplete = function(
-		optional_catalogues) {
-	_this = this;
 
-	optional_catalogues = (typeof optional_catalogues === 'undefined') ? []
-			: optional_catalogues;
+/**
+ * Load metadata for autocomplete from JSON array.
+ *
+ */
+TapAutocomplete.prototype.load_metadata_from_jsontree = function(optional_catalogues) {
+	_this = this;
 
 	if (_this.autocomplete_info)
 		jQuery("#" + _this.autocomplete_info).html(
-				"Loading catalogue metadata keywords for auto-complete");
+			"Loading catalogue metadata keywords for auto-complete");
+	if (_this.autocomplete_loader)
+		jQuery("#" + _this.autocomplete_loader).show();
+
+
+	/**
+	 * Check whether an object (obj) is contained in a list (a)
+	 *
+	 */
+	function contains(a, obj) {
+		var i = a.length;
+		while (i--) {
+			if (a[i] === obj) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+	function push_metadata_json(data) {
+		var objectarr = [];
+
+		if (data.length > 0) {
+			for (var i = 0; i < data.length; i++) {
+				if (optional_catalogues) {
+					if (contains(optional_catalogues, data[i]["catalogue"])) {
+						var catalogue_tables = data[i]["tables"].map(function(a) {
+							return a.name;
+						});
+						_this.editor.availableTags = _this.editor.availableTags.concat(catalogue_tables);
+					}
+				}
+				_this.editor.availableTags.push(data[i]["catalogue"]);
+			}
+		}
+
+	}
+
+	push_metadata_json(_this.jsontree);
+
+};
+
+
+/**
+ * Load metadata for autocomplete. Talks with a Web service that fetches the
+ * initial list of keywords
+ *
+ */
+TapAutocomplete.prototype.load_metadata_for_autocomplete = function(
+	optional_catalogues) {
+	_this = this;
+
+	optional_catalogues = (typeof optional_catalogues === 'undefined') ? [] : optional_catalogues;
+
+	if (_this.autocomplete_info)
+		jQuery("#" + _this.autocomplete_info).html(
+			"Loading catalogue metadata keywords for auto-complete");
 	if (_this.autocomplete_loader)
 		jQuery("#" + _this.autocomplete_loader).show();
 
@@ -317,32 +384,32 @@ TapAutocomplete.prototype.load_metadata_for_autocomplete = function(
 	}
 
 	optional_catalogues = JSON.stringify(optional_catalogues);
-	
+
 	jQuery.ajax({
-		type : "POST",
-		async : false,
-		data : {
-			resource : _this.tap_resource,
-			optional_catalogues : optional_catalogues,
-			mode : "tap",
+		type: "POST",
+		async: false,
+		data: {
+			resource: _this.tap_resource,
+			optional_catalogues: optional_catalogues,
+			mode: "tap",
 		},
-		url : _this.web_service_path,
-		timeout : 1000000,
-		error : function(e) {
+		url: _this.web_service_path,
+		timeout: 1000000,
+		error: function(e) {
 			if (_this.autocomplete_info)
 				jQuery("#" + _this.autocomplete_info).html(
-						"CTRL + Space to activate auto-complete");
+					"CTRL + Space to activate auto-complete");
 			if (_this.autocomplete_loader)
 				jQuery("#" + _this.autocomplete_loader).hide();
 		},
-		success : function(data) {
+		success: function(data) {
 
 			if (data != "") {
 				push_metadata_json(data);
 			}
 			if (_this.autocomplete_info)
 				jQuery("#" + _this.autocomplete_info).html(
-						"CTRL + Space to activate auto-complete");
+					"CTRL + Space to activate auto-complete");
 			if (_this.autocomplete_loader)
 				jQuery("#" + _this.autocomplete_loader).hide();
 		}
