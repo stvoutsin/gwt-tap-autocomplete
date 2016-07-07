@@ -112,6 +112,8 @@ var TapAutocomplete = function(params) {
 		this.load_metadata_from_html();
 	} else if (params.servicemode.toLowerCase() == "jsontree") {
 		this.load_metadata_from_jsontree(this.initial_catalogues);
+	} else if (params.servicemode.toLowerCase() == "gwt") {
+		this.load_metadata_from_gwt(this.initial_catalogues);
 	}
 }
 
@@ -171,6 +173,8 @@ TapAutocomplete.prototype.run = function() {
 		this.load_metadata_from_html();
 	} else if (this.servicemode.toLowerCase() == "jsontree") {
 		this.load_metadata_from_jsontree();
+	} else if (params.servicemode.toLowerCase() == "gwt") {
+		this.load_metadata_from_gwt(this.initial_catalogues);
 	}
 };
 
@@ -195,6 +199,8 @@ TapAutocomplete.prototype.refresh = function() {
 		this.load_metadata_from_html();
 	} else if (params.servicemode.toLowerCase() == "jsontree") {
 		this.load_metadata_from_jsontree(this.initial_catalogues);
+	} else if (params.servicemode.toLowerCase() == "gwt") {
+		this.load_metadata_from_gwt(this.initial_catalogues);
 	}
 
 };
@@ -211,6 +217,8 @@ TapAutocomplete.prototype.load_catalogue_tables = function(catalogue_list) {
 		this.load_metadata_from_html();
 	} else if (params.servicemode.toLowerCase() == "jsontree") {
 		this.load_metadata_from_jsontree();
+	} else if (params.servicemode.toLowerCase() == "gwt") {
+		this.load_metadata_from_gwt(this.initial_catalogues);
 	}
 };
 
@@ -414,5 +422,39 @@ TapAutocomplete.prototype.load_metadata_for_autocomplete = function(
 				jQuery("#" + _this.autocomplete_loader).hide();
 		}
 	});
+	
+	};
 
-};
+	/**
+	 * Load metadata for autocomplete. Talks with a GWT Web service that fetches the
+	 * initial list of keywords
+	 *
+	 */
+	TapAutocomplete.prototype.load_metadata_from_gwt = function(
+		optional_catalogues) {
+		_this = this;
+
+		optional_catalogues = (typeof optional_catalogues === 'undefined') ? [] : optional_catalogues;
+
+		if (_this.autocomplete_info)
+			jQuery("#" + _this.autocomplete_info).html(
+				"Loading catalogue metadata keywords for auto-complete");
+		if (_this.autocomplete_loader)
+			jQuery("#" + _this.autocomplete_loader).show();
+
+		function push_metadata_json(data) {
+			if (data.length > 0) {
+				for (var i = 0; i < data.length; i++) {
+					var str = jQuery.trim(data[i]);
+					var arr = str.split(".");
+					for (var y = 0; y < arr.length; y++) {
+						_this.editor.availableTags.push(arr[y]);
+					}
+				}
+			}
+
+		}
+		// Placeholder
+		// Call getSchemas()
+	};
+

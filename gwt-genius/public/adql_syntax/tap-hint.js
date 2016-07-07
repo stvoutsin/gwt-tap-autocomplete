@@ -306,6 +306,49 @@
   }
 
 
+
+  function getCompletionsGWT(token, context, keywords, options, editor, optional_keyword) {
+    optional_keyword = (typeof optional_keyword === 'undefined') ? '' : optional_keyword;
+    var found = [],
+      start = token.string;
+
+    function maybeAdd(str) {
+
+      if (str.toLowerCase().indexOf(start.toLowerCase()) == 0 && !jsArrayContains(found, str)) found.push(str);
+    }
+
+    function gatherCompletions(obj) {
+      if (typeof obj == "string") forEach(editor.availableTags, maybeAdd);
+      else if (obj instanceof Array) forEach(editor.availableTags, maybeAdd);
+      else if (obj instanceof Function) forEach(editor.availableTags, maybeAdd);
+      for (var name in obj) maybeAdd(name);
+    }
+
+
+    if (context) {
+
+      // If this is a property, see if it belongs to some object we can
+      // find in the current environment.
+      var obj = context.pop(),
+        base;
+      loadMetadataForGWT(optional_keyword, start, found, editor, optional_keyword);
+      return found.sort();
+
+
+    } else {
+      // If not, just look in the window object and any local scope
+      // (reading into JS mode internals to get at the local and global variables)
+      loadMetadataForGWT(optional_keyword, start, found, editor, optional_keyword);
+
+      forEach(keywords, maybeAdd);
+      return found.sort();
+    }
+
+
+    
+
+  }
+  
   /**
    * Load the medata content from (data) to be used by the
    * auto-completion functions Store the content in the
@@ -374,6 +417,31 @@
     return;
   }
 
+  
+
+  /**
+   *  Load metadata for autocomplete from GWT
+   *
+   */
+  function loadMetadataForGWT(keyword, parentText, tags, editor, optional_keyword) {
+
+    optional_keyword = (typeof optional_keyword === 'undefined') ? '' : optional_keyword;
+
+    if (editor.autocompleteInfo) jQuery("#" + editor.autocompleteInfo).html("Loading catalogue metadata keywords for auto-complete");
+    if (editor.autocompleteLoader) jQuery("#" + editor.autocompleteLoader).show();
+
+    if (optional_keyword){
+    	// Placeholder
+    	// getByKeyword(keyword);
+    	console.log("getByKeyword(" + optional_keyword + ")");
+    } else {
+    	console.log("getSchemas()");
+
+    }
+    
+    return;
+  }
+
 
   /**
    * Get autocomplete keywords for given token
@@ -431,13 +499,12 @@
 
 
   function scriptHint(editor, keywords, getToken, options) {
-
+	 
     // Find the token at the cursor
     var cur = editor.getCursor(),
     token = getToken(editor, cur),
     tprop = token;
     var optional_keyword = null;
-
     // If it's not a 'word-style' token, ignore the token.
     if (!/^[\w$_]*$/.test(token.string)) {
       token = tprop = {
@@ -448,7 +515,7 @@
         type: token.string == "." ? "property" : null
       };
     }
-
+    
     token_start_original = token.start;
     token_end_original = token.end;
     line_original = cur.line;
@@ -458,7 +525,7 @@
     cur_temp.ch=token.start;
     token_temp = getToken(editor, cur_temp);
 
-
+    
     if ( token_temp.string=="."){
       optional_keyword = token.string;
       token = tprop = {
@@ -470,13 +537,44 @@
       };   
 
     }
+    
 
     // If it is a property, find out what it is a property of.
     while (tprop.type == "property") {
       tprop = getToken(editor, {
         line: cur.line,
         ch: tprop.start
-      });
+      })
+       
+      if (editor.servicemode.toLowerCase() == "gwt") {
+    	   
+          tableProp = getToken(editor, {
+              line: cur.line,
+              ch: tprop.start
+            });
+          
+          tempProp = getToken(editor, {
+              line: cur.line,
+              ch: tableProp.start
+            });
+          
+	      if (tempProp.string.trim()=="."){
+	    	  
+	    	  schemaProp = getToken(editor, {
+	              line: cur.line,
+	              ch: tableProp.start-1
+	            });
+	    	  
+	    	  if (schemaProp.string){
+	    		  optional_keyword = schemaProp.string  + "." + tableProp.string + "." + optional_keyword;
+	          }
+	          
+	      } else {
+	    	  optional_keyword = tableProp.string + "." + optional_keyword;
+	      }
+	      
+      }
+
       if (tprop.string != ".") return;
       tprop = getToken(editor, {
         line: cur.line,
@@ -514,6 +612,15 @@
 
     }
 
+    if (editor.servicemode.toLowerCase() == "gwt") {
+    	if (!optional_keyword){
+    		if (token.string){
+    			optional_keyword = token.string;
+    		}
+    	}
+    }
+    
+    
     if (editor.servicemode.toLowerCase() != "tap") {
       if (editor.servicemode.toLowerCase() == "jsontree") {
         return {
@@ -527,6 +634,18 @@
             ch: token_end_original
           }
         };
+      } else if (editor.servicemode.toLowerCase() == "gwt") {
+            return {
+              list: getCompletionsGWT(token, context, keywords, options, editor, optional_keyword),
+              from: {
+                line: line_original,
+                ch: token_start_original
+              },
+              to: {
+                line: line_original,
+                ch: token_end_original
+              }
+            };
 
       } else {
         return {
