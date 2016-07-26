@@ -34,30 +34,14 @@
     <script type="text/javascript"  src="genius/genius.nocache.js"></script>
     <script type="text/javascript">
     $( document ).ready(function() {
-    	
-      jsontree = [
-         {
-				"catalogue":  "public",
-				"tables": [{"name": "igsl_source", "columns" : ["ra","dec"]}, 
-    		              {"name": "filter", "columns" : ["filterID","cutOn"]}
-    		  			  ],
-     	 
-     	 },
-     	 {
-				"catalogue":  "userdata",
-				"tables": [{"name": "usertable1", "columns" : ["ra","dec"]}, 
-		                  {"name": "usertable2", "columns" : ["ra2","dec2"]}
-		  			  	  ],
- 	 
- 		 }]
+ 
       
 	  var params = {
 	    textfieldid: "textfield",
 	    web_service_path: 'genius/autocompleteAsync',
-		tap_resource: 'https://gaia.esac.esa.int/tap-server/tap/',    
-	    servicemode: "jsontree",
-	    initial_catalogues: ["public"],
-	    jsontree: jsontree
+		//	tap_resource: 'https://gaia.esac.esa.int/tap-server/tap/',    
+	    servicemode: "gwt",
+	    //initial_catalogues: ["public"],
 	  }
 
 	  var autocompleteInstance = new TapAutocomplete(params);
