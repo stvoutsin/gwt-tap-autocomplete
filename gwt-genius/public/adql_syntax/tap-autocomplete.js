@@ -14,10 +14,11 @@
 /**
  * TapAutocomplete class
  *
- * @param {string} params.textfieldid - The textarea that the TapAutocomplete class will be instantiated for.
+ * @param {string} params.textfieldid - The textarea ID that the TapAutocomplete class will be instantiated for.
+ * @param {string} params.textAreaElement - The textarea element that the TapAutocomplete class will be instantiated for.
  * @param {string} web_service_path - The resource path that will run the TAP_SCHEMA requests and return a list of keywords
  * @param {string} tap_resource - The TAP service
- * @param {string} servicemode - Mode: TAP/VOSI/jsontree
+ * @param {string} servicemode - Mode: TAP/VOSI/jsontree/gwt
  * @param {string} autocomplete_info_id - Id of loader element to be toggled while keywords are being loaded
  * @param {string} autocomplete_info_id - Id of loader element to be toggled while keywords are being loaded
  * @param {string} initial_catalogues - Array of strings, For each (0 or more) catalogue, fetch list of children tables on startup
@@ -41,7 +42,12 @@ var TapAutocomplete = function(params) {
 	this.servicemode = "TAP";
 
 	if (params.textfieldid)
-		this.textfieldid = params.textfieldid
+		this.textfieldid = params.textfieldid;
+	if (params.textAreaElement){
+		this.textAreaElement = params.textAreaElement;
+	} else {
+		this.textAreaElement = document.getElementById(params.textfieldid);
+	}
 	if (params.web_service_path)
 		this.web_service_path = params.web_service_path;
 	if (params.html_resource)
@@ -66,6 +72,7 @@ var TapAutocomplete = function(params) {
 		this.istap = true;
 	}
 
+
 	if (this.editor == null && !jQuery('.CodeMirror').length > 0) {
 		CodeMirror.commands.autocomplete = function(cm) {
 			CodeMirror.tapHint(cm, CodeMirror.adqlHint, {
@@ -78,19 +85,25 @@ var TapAutocomplete = function(params) {
 
 			});
 		}
-
-		this.editor = CodeMirror.fromTextArea(document.getElementById(params.textfieldid), {
+		
+		
+		this.editor = CodeMirror.fromTextArea(this.textAreaElement, {
 			mode: "text/x-adql",
-			tabMode: "indent",
-			lineNumbers: true,
-			matchBrackets: true,
-			lineWrapping: true,
-			textWrapping: true,
+			lineNumbers : true,
+			lineWrapping : true,
+			matchBrackets : true,
+			indentWithTabs : true,
+			tabSize : 4,
+			indentUnit : 4,
 			extraKeys: {
 				"Ctrl-Space": "autocomplete",
 			},
 
 		});
+		
+		this.editor.setSize("100%", "100%");
+
+
 	}
 
 	if (typeof this.editor.availableTags == 'undefined') {
@@ -115,6 +128,8 @@ var TapAutocomplete = function(params) {
 	} else if (params.servicemode.toLowerCase() == "gwt") {
 		this.load_metadata_from_gwt(this.initial_catalogues);
 	}
+
+	return this;
 }
 
 /**
@@ -173,7 +188,7 @@ TapAutocomplete.prototype.run = function() {
 		this.load_metadata_from_html();
 	} else if (this.servicemode.toLowerCase() == "jsontree") {
 		this.load_metadata_from_jsontree();
-	} else if (params.servicemode.toLowerCase() == "gwt") {
+	} else if (this.servicemode.toLowerCase() == "gwt") {
 		this.load_metadata_from_gwt(this.initial_catalogues);
 	}
 };
@@ -182,27 +197,28 @@ TapAutocomplete.prototype.run = function() {
  * Refresh autocomplete
  */
 TapAutocomplete.prototype.refresh = function() {
-	CodeMirror.commands.autocomplete = function(cm) {
-		CodeMirror.tapHint(cm, CodeMirror.adqlHint, {
-			webServicePath: this.web_service_path,
-			tapResource: this.tap_resource,
-			servicemode: this.servicemode.toLowerCase(),
-			jsontree: this.jsontree,
-			autocompleteInfo: this.autocomplete_info,
-			autocompleteLoader: this.autocomplete_loader
-		});
-	}
-
-	if (params.servicemode.toLowerCase() == "tap") {
-		this.load_metadata_for_autocomplete(this.initial_catalogues);
-	} else if (params.servicemode.toLowerCase() == "vosi") {
-		this.load_metadata_from_html();
-	} else if (params.servicemode.toLowerCase() == "jsontree") {
-		this.load_metadata_from_jsontree(this.initial_catalogues);
-	} else if (params.servicemode.toLowerCase() == "gwt") {
-		this.load_metadata_from_gwt(this.initial_catalogues);
-	}
-
+	 if (this.editor != null && jQuery('.CodeMirror').length > 0 && this.servicemode!=null) {
+		CodeMirror.commands.autocomplete = function(cm) {
+			CodeMirror.tapHint(cm, CodeMirror.adqlHint, {
+				webServicePath: this.web_service_path,
+				tapResource: this.tap_resource,
+				servicemode: this.servicemode.toLowerCase(),
+				jsontree: this.jsontree,
+				autocompleteInfo: this.autocomplete_info,
+				autocompleteLoader: this.autocomplete_loader
+			});
+		}
+	
+		if (this.servicemode.toLowerCase() == "tap") {
+			this.load_metadata_for_autocomplete(this.initial_catalogues);
+		} else if (this.servicemode.toLowerCase() == "vosi") {
+			this.load_metadata_from_html();
+		} else if (this.servicemode.toLowerCase() == "jsontree") {
+			this.load_metadata_from_jsontree(this.initial_catalogues);
+		} else if (this.servicemode.toLowerCase() == "gwt") {
+			this.load_metadata_from_gwt(this.initial_catalogues);
+		}
+	 }
 };
 
 /**
@@ -425,12 +441,12 @@ TapAutocomplete.prototype.load_metadata_for_autocomplete = function(
 	
 	};
 
-	/**
-	 * Load metadata for autocomplete. Talks with a GWT Web service that fetches the
-	 * initial list of keywords
-	 *
-	 */
-	TapAutocomplete.prototype.load_metadata_from_gwt = function(
+/**
+ * Load metadata for autocomplete. Talks with a GWT Web service that fetches the
+ * initial list of keywords
+ *
+ */
+TapAutocomplete.prototype.load_metadata_from_gwt = function(
 		optional_catalogues) {
 		_this = this;
 
@@ -454,7 +470,21 @@ TapAutocomplete.prototype.load_metadata_for_autocomplete = function(
 			}
 
 		}
-		// Placeholder
-		// Call getSchemas()
+		 
+		var matches = window.gacsGetByKeyword("");
+		if (matches) push_metadata_json(matches);
+		 
 	};
+
+
+
+TapAutocomplete.prototype.focus = function(){ if (this.editor != null && jQuery('.CodeMirror').length > 0) {this.editor.focus();}};
+
+TapAutocomplete.prototype.setValue = function(){ if (this.editor != null && jQuery('.CodeMirror').length > 0) {this.editor.setValue();}};
+
+TapAutocomplete.prototype.getValue = function(){ if (this.editor != null && jQuery('.CodeMirror').length > 0) {this.editor.getValue();}};
+
+TapAutocomplete.prototype.updateData = function(matches){ if (this.editor != null && jQuery('.CodeMirror').length > 0) {}};
+
+
 
