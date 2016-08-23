@@ -1,6 +1,8 @@
 # Tap-autocomplete
 Autocomplete library, wrapped in GWT sample project, that allows dynamic metadata keyword loading from TAP services 
 
+The research leading to these results has received funding from the European Community's Seventh Framework Programme (FP7-SPACE-2013-1) under grant agreement n°606740.
+
 # Usage Example:  
 
 Javascript:
@@ -34,5 +36,5 @@ HTML:
       </tr>
     </table>
     
-    The research leading to these results has received funding from the European Community's Seventh Framework Programme (FP7-SPACE-2013-1) under grant agreement n°606740.
+    
 
