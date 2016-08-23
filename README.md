@@ -33,3 +33,6 @@ HTML:
         <td colspan="2" style="color:red;" id="errorLabelContainer"></td>
       </tr>
     </table>
+    
+    The research leading to these results has received funding from the European Community's Seventh Framework Programme (FP7-SPACE-2013-1) under grant agreement n°606740.
+
