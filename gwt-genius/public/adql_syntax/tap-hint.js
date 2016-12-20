@@ -395,6 +395,7 @@
 
     jQuery.ajax({
       type: "POST",
+      dataType: "json",
       async: false,
       data: {
         keyword: keyword,

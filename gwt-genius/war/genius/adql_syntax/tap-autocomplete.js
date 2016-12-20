@@ -294,6 +294,7 @@ TapAutocomplete.prototype.load_metadata_from_html = function() {
 	jQuery.ajax({
 		type: "POST",
 		async: false,
+		dataType: "json",
 		data: {
 			resource: _this.html_resource,
 			mode: "vosi"
@@ -411,6 +412,7 @@ TapAutocomplete.prototype.load_metadata_for_autocomplete = function(
 
 	jQuery.ajax({
 		type: "POST",
+		dataType: "json",
 		async: false,
 		data: {
 			resource: _this.tap_resource,
