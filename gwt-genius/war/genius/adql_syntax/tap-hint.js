@@ -673,17 +673,20 @@
     }
 
     var query = doc.getRange(validRange.start, validRange.end, false);
-
+    var prev;
     for (var i = 0; i < query.length; i++) {
       var lineText = query[i];
       eachWord(lineText, function(word) {
         var wordUpperCase = word.toUpperCase();
-
-	        if (wordUpperCase === aliasUpperCase){
+    
+	        if (wordUpperCase === aliasUpperCase && prev.toUpperCase()==CONS.ALIAS_KEYWORD.toUpperCase()){
 	          table = previousWord;
 	        }
-	        if (wordUpperCase !== CONS.ALIAS_KEYWORD)
+	        
+	        prev = word;
+	        if (wordUpperCase !== CONS.ALIAS_KEYWORD){
 	          previousWord = word;
+	        } 
 	      });
 	      if (table) break;
 	    }
