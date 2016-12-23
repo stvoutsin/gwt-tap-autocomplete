@@ -101,7 +101,7 @@ var TapAutocomplete = function(params) {
 
 		});
 		
-		this.editor.setSize("100%", "100%");
+		//this.editor.setSize("100%", "100%");
 
 
 	}
