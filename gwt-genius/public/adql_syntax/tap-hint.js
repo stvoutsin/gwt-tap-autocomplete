@@ -411,7 +411,7 @@
         if (editor.autocompleteLoader) jQuery("#" + editor.autocompleteLoader).hide();
       },
       success: function(data) {
-        if (data != "") {
+        if (data) {
           pushMetadataJson(data, tags, parentText, keyword);
         }
 

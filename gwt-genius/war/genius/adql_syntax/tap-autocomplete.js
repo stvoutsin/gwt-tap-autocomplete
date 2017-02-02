@@ -311,7 +311,7 @@ TapAutocomplete.prototype.load_metadata_from_html = function() {
 		},
 		success: function(data) {
 
-			if (data != "") {
+			if (data) {
 				push_metadata_content_html(data);
 			}
 			if (_this.autocomplete_info)
@@ -430,7 +430,7 @@ TapAutocomplete.prototype.load_metadata_for_autocomplete = function(
 		},
 		success: function(data) {
 
-			if (data != "") {
+			if (data) {
 				push_metadata_json(data);
 			}
 			if (_this.autocomplete_info)
