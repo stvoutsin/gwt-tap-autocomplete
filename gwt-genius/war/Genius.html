@@ -30,6 +30,8 @@
     <script src="genius/adql_syntax/codemirror.js"></script>
     <script src="genius/adql_syntax/adql.js"></script>
     <script src="genius/adql_syntax/tap-hint.js"></script>
+    <script src="genius/adql_syntax/votable.js"></script>
+    
     <script src="genius/adql_syntax/tap-autocomplete.js"></script>
     <script type="text/javascript"  src="genius/genius.nocache.js"></script>
     <script type="text/javascript">
@@ -38,9 +40,9 @@
       
 	  var params = {
 	    textfieldid: "textfield",
-	    web_service_path: 'genius/autocompleteAsync',
-		//	tap_resource: 'https://gaia.esac.esa.int/tap-server/tap/',    
-	    servicemode: "gwt",
+	    //web_service_path: 'genius/autocompleteAsync',
+		tap_resource: 'http://tapvizier.u-strasbg.fr/TAPVizieR/tap/',    
+	    servicemode: "tapjs",
 	    //initial_catalogues: ["public"],
 	  }
 

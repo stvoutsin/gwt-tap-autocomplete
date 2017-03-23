@@ -127,6 +127,8 @@ var TapAutocomplete = function(params) {
 		this.load_metadata_from_jsontree(this.initial_catalogues);
 	} else if (params.servicemode.toLowerCase() == "gwt") {
 		this.load_metadata_from_gwt(this.initial_catalogues);
+	} else if (params.servicemode.toLowerCase() == "tapjs") {
+		this.load_metadata_from_tapjs(this.initial_catalogues);
 	}
 
 	return this;
@@ -190,6 +192,8 @@ TapAutocomplete.prototype.run = function() {
 		this.load_metadata_from_jsontree();
 	} else if (this.servicemode.toLowerCase() == "gwt") {
 		this.load_metadata_from_gwt(this.initial_catalogues);
+	} else if (params.servicemode.toLowerCase() == "tapjs") {
+		this.load_metadata_from_tapjs(this.initial_catalogues);
 	}
 };
 
@@ -217,6 +221,8 @@ TapAutocomplete.prototype.refresh = function() {
 			this.load_metadata_from_jsontree(this.initial_catalogues);
 		} else if (this.servicemode.toLowerCase() == "gwt") {
 			this.load_metadata_from_gwt(this.initial_catalogues);
+		} else if (params.servicemode.toLowerCase() == "tapjs") {
+			this.load_metadata_from_tapjs(this.initial_catalogues);
 		}
 	 }
 };
@@ -235,6 +241,8 @@ TapAutocomplete.prototype.load_catalogue_tables = function(catalogue_list) {
 		this.load_metadata_from_jsontree();
 	} else if (params.servicemode.toLowerCase() == "gwt") {
 		this.load_metadata_from_gwt(this.initial_catalogues);
+	} else if (params.servicemode.toLowerCase() == "tapjs") {
+		this.load_metadata_from_tapjs(this.initial_catalogues);
 	}
 };
 
@@ -386,7 +394,7 @@ TapAutocomplete.prototype.load_metadata_from_jsontree = function(optional_catalo
 TapAutocomplete.prototype.load_metadata_for_autocomplete = function(
 	optional_catalogues) {
 	_this = this;
-
+	
 	optional_catalogues = (typeof optional_catalogues === 'undefined') ? [] : optional_catalogues;
 
 	if (_this.autocomplete_info)
@@ -452,6 +460,7 @@ TapAutocomplete.prototype.load_metadata_from_gwt = function(
 		optional_catalogues) {
 		_this = this;
 
+
 		optional_catalogues = (typeof optional_catalogues === 'undefined') ? [] : optional_catalogues;
 
 		if (_this.autocomplete_info)
@@ -480,6 +489,98 @@ TapAutocomplete.prototype.load_metadata_from_gwt = function(
 
 
 
+	/**
+	 * Load metadata for autocomplete. Talks with a Web service that fetches the
+	 * initial list of keywords
+	 *
+	 */
+	TapAutocomplete.prototype.load_metadata_from_tapjs = function(
+		optional_catalogues) {
+		_this = this;
+
+		
+		var p = new VOTableParser();
+		p.loadFile( _this.tap_resource + "/sync?QUERY=SELECT+TOP+10+schema_name+FROM+TAP_SCHEMA.schemas&LANG=ADQL&REQUEST=doQuery");
+
+	    var nbResources = p.getNbResourcesInFile();
+	    var nbTablesInResource = 0;
+	    var currentTableGroups = [];
+	    var currentTableFields = [];
+	    var currentTableData = [[]];
+
+	    for(var i = 0; i < nbResources; i++) {
+	        p.selectResource(i);
+	        nbTablesInResource = p.getCurrentResourceNbTables();
+	        for(var j = 0; j < nbTablesInResource; j++) {
+	            p.selectTable(j);
+	            //currentTableGroups = p.getCurrentTableGroups();
+	            //currentTableFields = p.getCurrentTableFields();
+	            currentTableData = p.getCurrentTableData();
+	            push_metadata_json(currentTableData);
+	            
+
+	            // ... do something
+	        }
+	    }
+	    // ... do something again
+	    p.cleanMemory();
+		
+		optional_catalogues = (typeof optional_catalogues === 'undefined') ? [] : optional_catalogues;
+
+		if (_this.autocomplete_info)
+			jQuery("#" + _this.autocomplete_info).html(
+				"Loading catalogue metadata keywords for auto-complete");
+		if (_this.autocomplete_loader)
+			jQuery("#" + _this.autocomplete_loader).show();
+
+		function push_metadata_json(data) {
+			if (data.length > 0) {
+				for (var i = 0; i < data.length; i++) {
+					var str = jQuery.trim(data[i]);
+					var arr = str.split(".");
+					for (var y = 0; y < arr.length; y++) {
+						_this.editor.availableTags.push(arr[y]);
+					}
+				}
+			}
+
+		}
+
+		optional_catalogues = JSON.stringify(optional_catalogues);
+
+		jQuery.ajax({
+			type: "POST",
+			dataType: "json",
+			async: false,
+			data: {
+				resource: _this.tap_resource,
+				optional_catalogues: optional_catalogues,
+				mode: "tap",
+			},
+			url: _this.web_service_path,
+			timeout: 1000000,
+			error: function(e) {
+				if (_this.autocomplete_info)
+					jQuery("#" + _this.autocomplete_info).html(
+						"CTRL + Space to activate auto-complete");
+				if (_this.autocomplete_loader)
+					jQuery("#" + _this.autocomplete_loader).hide();
+			},
+			success: function(data) {
+
+				if (data) {
+					push_metadata_json(data);
+				}
+				if (_this.autocomplete_info)
+					jQuery("#" + _this.autocomplete_info).html(
+						"CTRL + Space to activate auto-complete");
+				if (_this.autocomplete_loader)
+					jQuery("#" + _this.autocomplete_loader).hide();
+			}
+		});
+		
+		};
+		
 TapAutocomplete.prototype.focus = function(){ if (this.editor != null && jQuery('.CodeMirror').length > 0) {this.editor.focus();}};
 
 TapAutocomplete.prototype.setValue = function(){ if (this.editor != null && jQuery('.CodeMirror').length > 0) {this.editor.setValue();}};

@@ -355,6 +355,46 @@
 
   }
   
+  function getCompletionsTapJs(token, context, keywords, options, editor, optional_keyword) {  
+	    optional_keyword = (typeof optional_keyword === 'undefined') ? '' : optional_keyword;
+	    var found = [],
+	      start = token.string;
+
+	    function maybeAdd(str) {
+
+	      if (str.toLowerCase().indexOf(start.toLowerCase()) == 0 && !jsArrayContains(found, str)) found.push(str);
+	    }
+
+	    function gatherCompletions(obj) {
+	      if (typeof obj == "string") forEach(editor.availableTags, maybeAdd);
+	      else if (obj instanceof Array) forEach(editor.availableTags, maybeAdd);
+	      else if (obj instanceof Function) forEach(editor.availableTags, maybeAdd);
+	      for (var name in obj) maybeAdd(name);
+	    }
+
+	    if (context) {
+
+	      // If this is a property, see if it belongs to some object we can
+	      // find in the current environment.
+	      var obj = context.pop(),
+	        base;
+	      loadMetadataForAutocompleteTapJs(obj.string, start, found, editor, optional_keyword);
+	      return found.sort();
+
+
+	    } else {
+
+	      // If not, just look in the window object and any local scope
+	      // (reading into JS mode internals to get at the local and global variables)
+
+	      forEach(keywords, maybeAdd);
+	      return found.sort();
+	    }
+
+
+	  }
+	  
+  
   /**
    * Load the medata content from (data) to be used by the
    * auto-completion functions Store the content in the
@@ -451,7 +491,139 @@
     return;
   }
 
+  /**
+   *  Load metadata for autocomplete using votable.js TAP request
+   *  Sends request to TAP service (TAP_SCHEMA)
+   *
+   */
+  function loadMetadataForAutocompleteTapJs(keyword, parentText, tags, editor, optional_keyword) {
 
+    optional_keyword = (typeof optional_keyword === 'undefined') ? '' : optional_keyword;
+
+    if (editor.autocompleteInfo) jQuery("#" + editor.autocompleteInfo).html("Loading catalogue metadata keywords for auto-complete");
+    if (editor.autocompleteLoader) jQuery("#" + editor.autocompleteLoader).show();
+    
+	var getRequestString = editor.tapResource + "/sync?REQUEST=doQuery&VERSION=1.0&FORMAT=VOTABLE&LANG=ADQL&QUERY=";
+
+	var array= [];
+	//Number of dots
+	var count_dots = keyword.length - keyword.replace(".", "").length;
+    if (count_dots >= 2) {
+
+		query = "SELECT column_name FROM TAP_SCHEMA.columns WHERE table_name LIKE '%." + keyword
+				+ "' OR  table_name='" + keyword + "'";
+		if (optional_keyword != null && optional_keyword != "") {
+			query += " AND (column_name LIKE '" + optional_keyword + "%' OR column_name LIKE '" + keyword + "."
+					+ optional_keyword + "%')";
+		}
+		
+		var queryURLStr = getRequestString + escape(query);
+		array = votableJSQuery(queryURLStr);
+	// If no keyword is not empty, Check tables, and then columns if no tables found with keyword
+	// (A table name in TAP_SCHEMA may look like schema.tablename or tablename, need to find either)
+	} else if (keyword != "") {
+
+		query = "SELECT table_name FROM TAP_SCHEMA.tables WHERE schema_name='" + keyword + "'";
+		if (optional_keyword != null && optional_keyword != "") {
+			query += " AND (table_name LIKE '" + optional_keyword + "%' OR table_name LIKE '" + keyword + "."
+					+ optional_keyword + "%')";
+		}
+		
+		var queryURLStr = getRequestString + escape(query);
+		array = votableJSQuery(queryURLStr);
+		// No tables foundm check columns for keyword
+		if (array.length <= 0) {
+
+			query = "SELECT column_name FROM TAP_SCHEMA.columns WHERE table_name LIKE '%." + keyword
+					+ "' OR  table_name='" + keyword + "'";
+			if (optional_keyword != null && optional_keyword != "") {
+				query += " AND (column_name LIKE '" + optional_keyword + "%' OR column_name LIKE '" + keyword + "."
+						+ optional_keyword + "%')";
+
+			}
+			queryURLStr = getRequestString + escape(query);
+			array = votableJSQuery(queryURLStr);
+
+		}
+
+		//if (optional_keyword != null && optional_keyword != "") {
+		//	array = filter_name(array, optional_keyword);
+		//}
+
+	} else {
+		// No keyword found, get initial list of schemas or tables
+/*
+		try {
+			JSONArray json_array = null;
+			if (optional_catalogues != "" && optional_catalogues != null) {
+				json_array = new JSONArray(optional_catalogues);
+			}
+			
+			if (json_array.length()>0) {
+			
+				for (int i = 0; i < json_array.length(); i++) {
+
+					query = "SELECT t.table_name, s.schema_name FROM TAP_SCHEMA.tables as t, TAP_SCHEMA.schemas as s WHERE t.schema_name='" + json_array.get(i)
+							+ "'";
+					String queryURLStr = tapService + getRequestString
+							+ URLEncoder.encode(query, "UTF-8");
+					JSONArray newArray = starTableToJSONArray(urlToStartable(queryURLStr));
+					for (int y = 0; y < newArray.length(); y++) {
+						array.put(newArray.get(y));
+					}
+				}
+
+			} else {
+			*/
+				query = "SELECT schema_name FROM TAP_SCHEMA.schemas";
+				var queryURLStr = getRequestString + URLEncoder.encode(query);
+				array = votableJSQuery(queryURLStr);
+
+//			}
+
+	}
+    console.log(query);
+    console.log(queryURLStr);
+    console.log(array);
+    pushMetadataJson(array, tags, parentText, keyword);
+    
+
+    if (editor.autocompleteInfo) jQuery("#" + editor.autocompleteInfo).html("CTRL + Space to activate auto-complete");
+    if (editor.autocompleteLoader) jQuery("#" + editor.autocompleteLoader).hide();
+
+    return;
+  }
+  
+
+  function votableJSQuery(queryURLStr){
+		var p = new VOTableParser();
+		p.loadFile(queryURLStr);
+
+	    var nbResources = p.getNbResourcesInFile();
+	    var nbTablesInResource = 0;
+	    var currentTableGroups = [];
+	    var currentTableFields = [];
+	    var currentTableData = [[]];
+
+	    for(var i = 0; i < nbResources; i++) {
+	        p.selectResource(i);
+	        nbTablesInResource = p.getCurrentResourceNbTables();
+	        for(var j = 0; j < nbTablesInResource; j++) {
+	            p.selectTable(j);
+	            //currentTableGroups = p.getCurrentTableGroups();
+	            //currentTableFields = p.getCurrentTableFields();
+	            currentTableData = p.getCurrentTableData();
+	            
+
+	            // ... do something
+	        }
+	    }
+	    // ... do something again
+	    p.cleanMemory();
+	    return currentTableData;
+
+  }
+  
   /**
    * Get autocomplete keywords for given token
    */
@@ -880,6 +1052,19 @@
       } else if (editor.servicemode.toLowerCase() == "gwt") {
             return {
               list: getCompletionsGWT(token, context, keywords, options, editor, optional_keyword),
+              from: {
+                line: line_original,
+                ch: token_start_original
+              },
+              to: {
+                line: line_original,
+                ch: token_end_original
+              }
+            };
+
+      }  else if (editor.servicemode.toLowerCase() == "tapjs") {
+            return {
+              list: getCompletionsTapJs(token, context, keywords, options, editor, optional_keyword),
               from: {
                 line: line_original,
                 ch: token_start_original
